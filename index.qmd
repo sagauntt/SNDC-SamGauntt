@@ -1,0 +1,51 @@
+---
+title: "States Newsroom defense spending project"
+format: html
+editor: visual
+author: Sam Gauntt
+---
+
+```{r}
+#loading packages and initial, messy data
+library(tidyverse)
+library(stringr)
+library(dplyr)
+library(janitor) 
+
+
+defense_earmarks_raw <- read_csv("~/Documents/GitHub/SNDC-SamGauntt/tabula-fy27_ndaa_-_cpf_requests_submitted_for_public_posting_5.26.26.csv") |> clean_names() 
+```
+
+
+```{r}
+#time to clean. the "link to member website column got partially cut off when I converted this PDF into a CSV using Tabula. To remedy this, I will take all text in a row on its own and then append it back on to the link to member website column. 
+
+earmarks_clean <- defense_earmarks_raw |>
+  mutate(
+    has_name = !is.na(member_name_last_first) & member_name_last_first != "",
+    group_id = cumsum(has_name)
+  ) |>
+  group_by(group_id) |>
+  summarise(
+    member_name_last_first = first(member_name_last_first),
+    stat_e = first(stat_e),
+    project_name = first(project_name),
+    amount_requested_in_thousands_of_dollars = first(amount_requested_in_thousands_of_dollars),
+    project_city_county_state = first(project_city_county_state),
+    recipient_name = first(recipient_name),
+    recipient_address = first(recipient_address),
+    project_purpose = first(project_purpose),
+    project_justification = first(project_justification),
+    link_to_member_website = paste(
+      na.omit(link_to_member_website[link_to_member_website != ""]), 
+      collapse = ""
+    ),
+    .groups = "drop"
+  ) |>select(-group_id) 
+
+# 3. Export the repaired data back to a clean CSV
+write_csv(earmarks_clean, "earmarks_cleaned.csv") 
+
+
+```
+
