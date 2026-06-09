@@ -42,39 +42,207 @@ earmarks_27 <- earmarks_27 |> mutate(fiscal_year = "2027") |> mutate(
     amount_requested_in_thousands_of_dollars = as.numeric(amount_requested_in_thousands_of_dollars)
   ) 
 
-earmarks <- bind_rows(earmarks_24, earmarks_25, earmarks_26, earmarks_27) 
+earmarks <- bind_rows(earmarks_24, earmarks_25, earmarks_26, earmarks_27) |> write_csv("")
 
 
 ```
+```{r}
+#earmark totals
+
+earmark_totals <- earmarks |> group_by(state, fiscal_year) |>
+  summarize(
+    total_spending = sum(amount_requested_in_thousands_of_dollars)
+  ) 
+
+```
+
+
+
+
 
 ```{r}
-#time to clean. the "link to member website column got partially cut off when I converted this PDF into a CSV using Tabula. To remedy this, I will take all text in a row on its own and then append it back on to the link to member website column. 
+#defense contractor analysis 
 
-earmarks_clean <- defense_earmarks_raw |>
-  mutate(
-    has_name = !is.na(member_name_last_first) & member_name_last_first != "",
-    group_id = cumsum(has_name)
-  ) |>
-  group_by(group_id) |>
-  summarise(
-    member_name_last_first = first(member_name_last_first),
-    stat_e = first(stat_e),
-    project_name = first(project_name),
-    amount_requested_in_thousands_of_dollars = first(amount_requested_in_thousands_of_dollars),
-    project_city_county_state = first(project_city_county_state),
-    recipient_name = first(recipient_name),
-    recipient_address = first(recipient_address),
-    project_purpose = first(project_purpose),
-    project_justification = first(project_justification),
-    link_to_member_website = paste(
-      na.omit(link_to_member_website[link_to_member_website != ""]), 
-      collapse = ""
-    ),
-    .groups = "drop"
-  ) |>select(-group_id) 
 
-# 3. Export the repaired data back to a clean CSV
-write_csv(earmarks_clean, "earmarks_cleaned.csv") 
+
 
 
 ```
+
+
+```{r include=FALSE}
+library(httr)
+library(jsonlite)
+library(dplyr)
+library(gt)
+```
+
+
+```{r}
+library(httr2)
+library(tidyverse)
+library(scales)
+
+# 1. Target a highly stable summary endpoint
+url <- "https://api.usaspending.gov/api/v2/references/toptier_agencies/"
+
+# 2. Execute a simple GET request (no complex JSON body required)
+response <- request(url) %>%
+  req_retry(max_tries = 3) %>%
+  req_perform()
+
+# 3. Parse the data
+raw_data <- response %>% resp_body_json()
+
+# 4. Filter for Department of Defense and extract details safely
+agencies_df <- tibble(results = raw_data$results) %>%
+  unnest_wider(results)
+
+cat_url <- "https://api.usaspending.gov/api/v2/search/spending_by_category/recipient_duns/"
+
+cat_payload <- list(
+  filters = list(
+    agencies = list(
+      list(
+        type = "awarding",
+        tier = "toptier",
+        name = "Department of Defense"
+      )
+    ),
+    time_period = list(
+      list(
+        start_date = "2019-10-01",
+        end_date = as.character(Sys.Date())
+      )
+    )
+  ),
+  limit = 50,
+  page = 1
+) 
+
+cat_response <- request(cat_url) %>%
+  req_body_json(cat_payload) %>%
+  req_perform() 
+
+cat_data <- cat_response %>% resp_body_json()
+
+# Extract into Top 10 Data Table
+top_10_defense <- tibble(results = cat_data$results) %>%
+  unnest_wider(results) %>%
+  select(
+    recipient_name = name, 
+    total_spending_received = amount
+  ) %>%
+  mutate(
+    formatted_total = dollar(total_spending_received, scale = 1e-9, suffix = " B")
+  ) 
+
+print(top_10_defense)
+
+
+
+
+
+
+
+```
+
+
+
+```{r}
+# 1. Define endpoint and years to evaluate
+url <- "https://api.usaspending.gov/api/v2/search/spending_by_category/recipient_duns/"
+fiscal_years <- c(2023, 2024, 2025)
+
+# Helper function to query a specific fiscal year
+get_defense_spending_by_year <- function(fy) {
+  # Define dates based on federal fiscal year bounds (Oct 1 - Sept 30)
+  start_date <- paste0(fy - 1, "-10-01")
+  end_date <- paste0(fy, "-09-30")
+  
+  payload <- list(
+    filters = list(
+      agencies = list(
+        list(type = "awarding", tier = "toptier", name = "Department of Defense")
+      ),
+      time_period = list(
+        list(start_date = start_date, end_date = end_date)
+      )
+    ),
+    limit = 100, # Top 100 companies per year to catch tech firms & traditional primes
+    page = 1
+  )
+  
+  response <- request(url) %>%
+    req_body_json(payload) %>%
+    req_retry(max_tries = 3) %>%
+    req_perform()
+  
+  data <- response %>% resp_body_json()
+  
+  # Parse safely into a table
+  tibble(results = data$results) %>%
+    unnest_wider(results) %>%
+    select(recipient_name = name, amount) %>%
+    mutate(fiscal_year = fy)
+}
+
+# 2. Fetch data across all specified years and stack them
+all_years_data <- map_dfr(fiscal_years, get_defense_spending_by_year)
+
+# 3. Clean names and group similar entries (e.g., handling variations in casing)
+cleaned_spending <- all_years_data %>%
+  mutate(
+    recipient_clean = str_to_upper(recipient_name),
+    # Simplify Palantir variations if they appear with different sub-entities
+    recipient_clean = if_else(str_detect(recipient_clean, "PALANTIR"), "PALANTIR TECHNOLOGIES", recipient_clean)
+  ) %>%
+  group_by(recipient_clean, fiscal_year) %>%
+  summarise(total_amount = sum(amount, na.rm = TRUE), .groups = "drop")
+
+# 4. Pivot wider to compute Year-over-Year Percentage Change
+spending_trends <- cleaned_spending %>%
+  pivot_wider(names_from = fiscal_year, values_from = total_amount, names_prefix = "fy_") %>%
+  # Fill missing fields with 0 if a company didn't make the top 100 in a certain year
+  mutate(across(starts_with("fy_"), ~replace_na(., 0))) %>%
+  # Calculate Percentage Changes
+  mutate(
+    pct_change_23_24 = ((fy_2024 - fy_2023) / fy_2023) * 100,
+    pct_change_24_25 = ((fy_2025 - fy_2024) / fy_2024) * 100
+  )
+
+# 5. Filter to compare Palantir directly against traditional legacy primes
+comparison_table <- spending_trends %>%
+  filter(
+    str_detect(recipient_clean, "PALANTIR|LOCKHEED|RAYTHEON|GENERAL DYNAMICS|BOEING|NORTHROP")
+  ) %>%
+  select(recipient_clean, fy_2023, fy_2024, fy_2025, pct_change_23_24, pct_change_24_25)
+
+print(comparison_table)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
