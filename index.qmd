@@ -13,9 +13,39 @@ library(dplyr)
 library(janitor) 
 
 
-defense_earmarks_raw <- read_csv("~/Documents/GitHub/SNDC-SamGauntt/tabula-fy27_ndaa_-_cpf_requests_submitted_for_public_posting_5.26.26.csv") |> clean_names() 
-```
+earmarks_24 <- read_csv("~/Documents/GitHub/SNDC-SamGauntt/data/tabula-fy24 ndaa - cpf requests submitted for public posting 4.27.23.csv") |> clean_names()
 
+earmarks_25 <- read_csv("~/Documents/GitHub/SNDC-SamGauntt/data/tabula-fy25 ndaa - cpf requests submitted for public posting 5.20.24.csv") |> clean_names()
+
+earmarks_26 <- read_csv("~/Documents/GitHub/SNDC-SamGauntt/data/tabula-fy26_ndaa_-_cpf_requests_submitted_for_public_posting_7.7.25.csv") |> clean_names()
+
+earmarks_27 <- read_csv("~/Documents/GitHub/SNDC-SamGauntt/data/tabula-fy27_ndaa_-_cpf_requests_submitted_for_public_posting_5.26.26.csv") |> clean_names() 
+
+
+glimpse(earmarks_24)
+glimpse(earmarks_25)
+glimpse(earmarks_26)
+glimpse(earmarks_27)
+
+
+
+#lets add a column for fiscal year, and then bind into one dataframe for easier analysis. 
+
+earmarks_24 <- earmarks_24 |> mutate(fiscal_year = "2024") 
+
+earmarks_25 <- earmarks_25 |> mutate(fiscal_year = "2025")
+
+earmarks_26 <- earmarks_26 |> mutate(fiscal_year = "2026")
+
+earmarks_27 <- earmarks_27 |> mutate(fiscal_year = "2027") |> mutate(
+    amount_requested_in_thousands_of_dollars = str_replace_all(amount_requested_in_thousands_of_dollars, ",", ""), 
+    amount_requested_in_thousands_of_dollars = as.numeric(amount_requested_in_thousands_of_dollars)
+  ) 
+
+earmarks <- bind_rows(earmarks_24, earmarks_25, earmarks_26, earmarks_27) 
+
+
+```
 
 ```{r}
 #time to clean. the "link to member website column got partially cut off when I converted this PDF into a CSV using Tabula. To remedy this, I will take all text in a row on its own and then append it back on to the link to member website column. 
@@ -48,4 +78,3 @@ write_csv(earmarks_clean, "earmarks_cleaned.csv")
 
 
 ```
-
