@@ -42,21 +42,30 @@ earmarks_27 <- earmarks_27 |> mutate(fiscal_year = "2027") |> mutate(
     amount_requested_in_thousands_of_dollars = as.numeric(amount_requested_in_thousands_of_dollars)
   ) 
 
-earmarks <- bind_rows(earmarks_24, earmarks_25, earmarks_26, earmarks_27) |> write_csv("")
+earmarks <- bind_rows(earmarks_24, earmarks_25, earmarks_26) 
+
+write_csv(earmarks, "earmarks.csv") 
 
 
 ```
+
+
+
+
+
 ```{r}
 #earmark totals
 
-earmark_totals <- earmarks |> group_by(state, fiscal_year) |>
+earmark_totals <- earmarks |> group_by(state) |>
   summarize(
     total_spending = sum(amount_requested_in_thousands_of_dollars)
   ) 
 
+write_csv(earmark_totals, "earmark_states.csv") 
+
 ```
 
-
+<iframe title="Florida received $2.4 billion in defense spending through earmarks from FY2024-26" aria-label="Choropleth map" id="datawrapper-chart-s2cTF" src="https://datawrapper.dwcdn.net/s2cTF/1/" scrolling="no" frameborder="0" style="width: 0; min-width: 100% !important; border: none;" height="527" data-external="1"></iframe><script type="text/javascript">(function(){function e(){window.addEventListener(`message`,function(e){if(e.data[`datawrapper-height`]!==void 0){var t=document.querySelectorAll(`iframe`);for(var n in e.data[`datawrapper-height`])for(var r=0,i;i=t[r];r++)if(i.contentWindow===e.source){var a=e.data[`datawrapper-height`][n]+`px`;i.style.height=a}}})}e()})();</script>
 
 
 
