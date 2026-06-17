@@ -49,10 +49,6 @@ write_csv(earmarks, "earmarks.csv")
 
 ```
 
-
-
-
-
 ```{r}
 #earmark totals
 
@@ -65,9 +61,13 @@ write_csv(earmark_totals, "earmark_states.csv")
 
 ```
 
-<iframe title="Florida received $2.4 billion in defense spending through earmarks from FY2024-26" aria-label="Choropleth map" id="datawrapper-chart-s2cTF" src="https://datawrapper.dwcdn.net/s2cTF/1/" scrolling="no" frameborder="0" style="width: 0; min-width: 100% !important; border: none;" height="527" data-external="1"></iframe><script type="text/javascript">(function(){function e(){window.addEventListener(`message`,function(e){if(e.data[`datawrapper-height`]!==void 0){var t=document.querySelectorAll(`iframe`);for(var n in e.data[`datawrapper-height`])for(var r=0,i;i=t[r];r++)if(i.contentWindow===e.source){var a=e.data[`datawrapper-height`][n]+`px`;i.style.height=a}}})}e()})();</script>
+<iframe title="Florida received $2.4 billion in defense spending through earmarks from FY2024-26" aria-label="Choropleth map" id="datawrapper-chart-s2cTF" src="https://datawrapper.dwcdn.net/s2cTF/1/" scrolling="no" frameborder="0" style="width: 0; min-width: 100% !important; border: none;" height="527" data-external="1">
 
+</iframe>
 
+```{=html}
+<script type="text/javascript">(function(){function e(){window.addEventListener(`message`,function(e){if(e.data[`datawrapper-height`]!==void 0){var t=document.querySelectorAll(`iframe`);for(var n in e.data[`datawrapper-height`])for(var r=0,i;i=t[r];r++)if(i.contentWindow===e.source){var a=e.data[`datawrapper-height`][n]+`px`;i.style.height=a}}})}e()})();</script>
+```
 
 ```{r}
 #defense contractor analysis 
@@ -78,14 +78,12 @@ write_csv(earmark_totals, "earmark_states.csv")
 
 ```
 
-
 ```{r include=FALSE}
 library(httr)
 library(jsonlite)
 library(dplyr)
 library(gt)
 ```
-
 
 ```{r}
 library(httr2)
@@ -155,8 +153,6 @@ print(top_10_defense)
 
 
 ```
-
-
 
 ```{r}
 # 1. Define endpoint and years to evaluate
@@ -229,29 +225,3 @@ comparison_table <- spending_trends %>%
 
 print(comparison_table)
 ```
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
