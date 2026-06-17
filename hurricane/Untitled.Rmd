@@ -24,6 +24,18 @@ state_ihp <- FEMA_awards |>
   arrange(desc(ihp_total)) 
 
 write_csv(state_ihp, "state_ihp_totals.csv") 
+
+
+state_PA <- FEMA_awards |>
+  group_by(state) |>
+  summarise(
+    pa_total = sum(pa_total, na.rm = TRUE),
+    .groups = "drop"
+  ) |>
+  arrange(desc(pa_total)) 
+
+write_csv(state_PA, "state_pa_totals.csv") 
+
 ```
 
 Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Cmd+Option+I*.
