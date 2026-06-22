@@ -1,0 +1,238 @@
+---
+title: "DOD Spending - Samuel Gaunt"
+author: "Wells"
+date: "2026-05-25"
+output: html_document
+---
+
+
+***Starter code***
+# load libraries
+```{r}
+#install.packages("tidycensus")
+library(tidyverse)
+library(tidycensus)
+library(janitor)
+```
+
+#load DOD Spending data
+```{r}
+
+spending <- read_csv("../data/dod_spending_fy2020-24.csv") |> 
+     clean_names()
+
+```
+
+## Spending by Fiscal Year
+
+```{r}
+options(scipen = 999)  # Disable scientific notation globally
+
+spending |> 
+group_by(fyear) |> 
+  summarize(
+    n = n(),
+    total_spent = sum(spending_total, na.rm = TRUE)
+  ) |> 
+  arrange(fyear)
+
+```
+
+## Spending by State
+
+```{r}
+spending |> 
+group_by(state_nm) |> 
+  summarize(
+    n = n(),
+    total_spent = sum(spending_total, na.rm = TRUE)
+  ) |> 
+  arrange(desc(total_spent))
+
+```
+
+## Spending by county
+```{r}
+spending |> 
+group_by(cty_name, state_nm) |> 
+  summarize(
+     total_spent = sum(spending_total, na.rm = TRUE),
+     n = n()
+  ) |> 
+  arrange(desc(total_spent))
+
+```
+
+## Highlight specific county
+```{r}
+
+spending |> 
+  filter(cty_name == "HENNEPIN") |> 
+  group_by(agency) |> 
+  summarize(
+     total_spent = sum(spending_total, na.rm = TRUE),
+     n = n()
+  ) |> 
+  arrange(desc(total_spent))
+```
+
+## Highlight specific state and city
+```{r}
+spending |> 
+  filter(state_nm == "ALABAMA") |> 
+  filter(cty_name == "COFFEE") |> 
+  select(fyear, cty_name, spending_total)
+```
+
+***My tests***
+```{r}
+
+#looking at top three states over time
+
+spending |> 
+  filter(state_nm == "TEXAS") |> 
+  group_by(fyear, state_nm) |> 
+  summarize(
+     total_spent = sum(spending_total, na.rm = TRUE),
+     n = n()
+  ) |> 
+  arrange(desc(fyear))
+
+spending |> 
+  filter(state_nm == "VIRGINIA") |> 
+  group_by(fyear, state_nm) |> 
+  summarize(
+     total_spent = sum(spending_total, na.rm = TRUE),
+     n = n()
+  ) |> 
+  arrange(desc(fyear))
+
+spending |> 
+  filter(state_nm == "CALIFORNIA") |> 
+  group_by(fyear, state_nm) |> 
+  summarize(
+     total_spent = sum(spending_total, na.rm = TRUE),
+     n = n()
+  ) |> 
+  arrange(desc(fyear))
+
+```
+```{r}
+#lets compare funding to red states vs blue states to see if there is a difference. first, i'm going to create a dataframe of total spending in each state. 
+
+states_spending <- spending |> 
+group_by(state_nm) |> 
+  summarize(
+    n = n(),
+    total_spent = sum(spending_total, na.rm = TRUE)
+  ) |> 
+  arrange(desc(total_spent)) |>
+  mutate(state_nm = str_to_title(state_nm)) |>
+  rename(state = state_nm) 
+
+#lets load election results for the 2020 and 2024 elections. 
+
+voter_trends <- read_csv("../data/voter_trends.csv") |> clean_names() 
+
+states_spending_by_party <- left_join(states_spending, voter_trends, by = "state") |> filter(!is.na(electoral_votes)) 
+
+states_spending_by_party |> group_by(results_2024) |>
+  summarize(
+    total_spending = sum(total_spent)
+  ) 
+
+
+#time to bring in some population data as well. yay, per capita rates! 
+
+library(tidycensus) 
+
+
+spending <- spending |>
+  mutate(
+    GEOID = str_pad(as.character(cty_cd), 5, pad = "0")
+  ) 
+
+head(spending %>% select(state_cd, cty_cd)) 
+
+
+spending_20 <- spending |>
+  filter(fyear==2020) 
+
+spending_21 <- spending |>
+  filter(fyear==2021) 
+
+spending_22 <- spending |>
+  filter(fyear==2022) 
+
+spending_23 <- spending |>
+  filter(fyear==2023) 
+
+spending_24 <- spending |>
+  filter(fyear==2024) 
+
+county_pop_2020 <- get_acs(
+  geography = "county",
+  variables = "B01003_001",  # total population
+  year = 2020
+) |>
+  select(GEOID, population = estimate)  
+
+county_pop_2021 <- get_acs(
+  geography = "county",
+  variables = "B01003_001",  # total population
+  year = 2021
+) |>
+  select(GEOID, population = estimate) 
+
+county_pop_2022 <- get_acs(
+  geography = "county",
+  variables = "B01003_001",  # total population
+  year = 2022
+) |>
+  select(GEOID, population = estimate) 
+
+county_pop_2023 <- get_acs(
+  geography = "county",
+  variables = "B01003_001",  # total population
+  year = 2023
+) |>
+  select(GEOID, population = estimate) 
+
+county_pop_2024 <- get_acs(
+  geography = "county",
+  variables = "B01003_001",  # total population
+  year = 2024
+) |>
+  select(GEOID, population = estimate) 
+
+spending_20 <- spending_20 |>
+  left_join(county_pop_2020, by = "GEOID") 
+
+spending_21 <- spending_21 |>
+  left_join(county_pop_2021, by = "GEOID") 
+
+spending_22 <- spending_22 |>
+  left_join(county_pop_2022, by = "GEOID") 
+
+spending_23 <- spending_23 |>
+  left_join(county_pop_2023, by = "GEOID") 
+
+spending_24 <- spending_24 |>
+  left_join(county_pop_2024, by = "GEOID") 
+
+bind_rows()
+
+spending_pop <- bind_rows(
+  spending_20,
+  spending_21,
+  spending_22,
+  spending_23,
+  spending_24
+) 
+
+
+
+
+```
+
+

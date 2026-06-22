@@ -1,0 +1,306 @@
+---
+title: "The U.S. government spends hundreds of billions each year on defense. Where does it go?"
+format: 
+  html: 
+    theme: lumen
+    toc: true
+    toc-depth: 2
+    math: katex
+editor: visual
+execute: 
+  warning: false # suppress warnings
+date: last-modified
+date-format: "YYYY-MM-DD HH:mm"
+author: 
+  - name: Sam Gauntt
+    email: sgauntt@terpmail.umd.edu
+    url: https://www.linkedin.com/in/sam-gauntt-203716247/
+---
+
+![Photo via Flickr](https://raw.githubusercontent.com/djnf-data-2026/samuel-gauntt/main/images/48844139503_7fd165c96f_o.jpg)
+
+## What is this story about?
+
+The federal government sends hundreds of billions in defense spending to states across the U.S. each year. Who benefits the most? This story will look into where DOD spending is concentrated, and how population, political ideology and other traits relate to this spread.
+
+## Why tell this story NOW?
+
+With President Trump requesting \$1.5 trillion for the next federal military budget, an increase of 44%, now is a better time than ever to dig into where the federal government concentrates its military spending. 
+
+## Key takeaways
+
+### **Finding 1: Texas, California and Virginia made up the Top 3 states in total spending in both 2020 and 2024. But they switched positions.**
+
+[**2020**]{.underline}
+
+```{r}
+#| message: false
+#| warning: false
+#| code-fold: true
+#| code-summary: "Code"
+
+library(tidyverse)
+library(tidycensus)
+library(janitor)
+library(DT) 
+library(dplyr) 
+
+spending <- read_csv("../data/dod_spending_fy2020-24.csv") |> 
+     clean_names()
+
+top_spenders_20 <- spending |>
+  filter(fyear == 2020) |>
+  group_by(state_nm) |>
+  summarize(
+    total_spent = sum(spending_total, na.rm = TRUE),
+    .groups = "drop"
+  ) |>
+  arrange(desc(total_spent)) |>
+  mutate(
+    total_spent_billions = total_spent / 1e9,
+    total_spending_20 = scales::dollar(total_spent_billions, suffix = "B")
+  ) |> mutate(
+    state_nm = replace_na(state_nm, "NO STATE LISTED")
+  ) |>
+  select(state_nm, total_spending_20) |> rename(
+     State = state_nm,
+     `Total defense spending in (billions)` = total_spending_20
+   ) 
+
+top_spenders_24 <- spending |>
+  filter(fyear == 2024) |>
+  group_by(state_nm) |>
+  summarize(
+    total_spent = sum(spending_total, na.rm = TRUE),
+    .groups = "drop"
+  ) |>
+  arrange(desc(total_spent)) |>
+  mutate(
+    total_spent_billions = total_spent / 1e9,
+    total_spending_24 = scales::dollar(total_spent_billions, suffix = "B")
+  ) |>  mutate(
+    state_nm = replace_na(state_nm, "NO STATE LISTED")
+  ) |>select(state_nm, total_spending_24) |> rename(
+     State = state_nm,
+     `Total defense spending in (billions)` = total_spending_24
+   ) 
+
+datatable(
+  top_spenders_20,
+  options = list(
+    pageLength = 10,
+    dom = "t"
+  ),
+  caption = "Top 10 states by defense spending in FY2020"
+) 
+```
+
+[**2024**]{.underline}
+
+```{r}
+#| message: false
+#| warning: false
+#| code-fold: true
+#| code-summary: "Code"
+
+datatable(
+  top_spenders_24,
+  options = list(
+    pageLength = 10,
+    dom = "t"
+  ),
+  caption = "Top 10 states by defense spending in FY2024"
+) 
+
+
+```
+
+<br>
+
+### **Finding 2: In 2020, Connecticut ranked first in per capita spending, with an average of \$6300 for each resident. Virginia received the most spending per resident in 2024, at about \$5,800 per capita.**
+
+<br>
+
+<iframe title="Connecticut received $6325 in federal defense spending per resident in 2020, most of any state" aria-label="Choropleth map" id="datawrapper-chart-0Sn0K" src="https://datawrapper.dwcdn.net/0Sn0K/10/" scrolling="no" frameborder="0" style="width: 0; min-width: 100% !important; border: none;" height data-external="1">
+
+</iframe>
+
+```{=html}
+<script type="text/javascript">(function(){function e(){window.addEventListener(`message`,function(e){if(e.data[`datawrapper-height`]!==void 0){var t=document.querySelectorAll(`iframe`);for(var n in e.data[`datawrapper-height`])for(var r=0,i;i=t[r];r++)if(i.contentWindow===e.source){var a=e.data[`datawrapper-height`][n]+`px`;i.style.height=a}}})}e()})();</script>
+```
+
+<br>
+
+### **Finding 3: Over the four years the data tracks (from FY2020 to FY2024), Tarrant County in the area of Fort Worth, Texas, received by far the most defense spending of any community across the country at about \$120 billion.**
+
+```{r}
+#| message: false
+#| warning: false
+#| code-fold: true
+#| code-summary: Code
+
+
+  spending_cty <- spending |> 
+  group_by(cty_name, state_nm) |> 
+    summarize(
+       total_spent = sum(spending_total, na.rm = TRUE),
+       n = n()
+    ) |> 
+    arrange(desc(total_spent)) |>
+    mutate('total_spent_$' = scales::dollar(total_spent / 1e9, suffix = "B", accuracy = 0.01)) |>
+    select(cty_name, state_nm, 'total_spent_$') |>  mutate(
+    cty_name = replace_na(cty_name, "NO COUNTY LISTED")
+  ) |> rename(
+     County = cty_name,
+     State = state_nm,
+     `Total defense spending in (billions)` = 'total_spent_$'
+   ) 
+
+
+datatable(
+  spending_cty,
+  options = list(
+    pageLength = 10,
+    dom = "t"
+  ),
+  caption = "Top 10 counties by defense spending from FY2020 to FY2024"
+) 
+```
+
+### **Finding 4: In 2020, during Donald Trump's presidency, states that voted for the Democratic Party in the Electoral College received more total defense spending. In 2024, during Joe Biden's presidency, states voting for the Republican Party in the Electoral College received slightly more spending on average.**
+
+<br>
+
+<iframe title="States that voted for the opposite party of the president received more funding in both 2020 and 2024" aria-label="Grouped Bars" id="datawrapper-chart-IMyF8" src="https://datawrapper.dwcdn.net/IMyF8/1/" scrolling="no" frameborder="0" style="width: 0; min-width: 100% !important; border: none;" height="320" data-external="1">
+
+</iframe>
+
+```{=html}
+<script type="text/javascript">(function(){function e(){window.addEventListener(`message`,function(e){if(e.data[`datawrapper-height`]!==void 0){var t=document.querySelectorAll(`iframe`);for(var n in e.data[`datawrapper-height`])for(var r=0,i;i=t[r];r++)if(i.contentWindow===e.source){var a=e.data[`datawrapper-height`][n]+`px`;i.style.height=a}}})}e()})();</script>
+```
+
+```{r}
+#| message: false
+#| warning: false
+#| code-fold: true
+#| code-summary: "Code"
+
+  voter_trends <- read_csv("../data/voter_trends.csv") |> clean_names() 
+
+  states_spending_20 <- spending |> 
+    filter(fyear==2020) |> 
+  group_by(state_nm) |> 
+    summarize(
+      n = n(),
+      total_spent = sum(spending_total, na.rm = TRUE)
+    ) |> 
+    arrange(desc(total_spent)) |>
+    mutate(state_nm = str_to_title(state_nm)) |>
+    rename(state = state_nm) 
+
+  states_spending_24 <- spending |> 
+    filter(fyear==2024) |>
+  group_by(state_nm) |> 
+    summarize(
+      n = n(),
+      total_spent = sum(spending_total, na.rm = TRUE)
+    ) |> 
+    arrange(desc(total_spent)) |>
+    mutate(state_nm = str_to_title(state_nm)) |>
+    rename(state = state_nm) 
+
+states_spending_by_party_20 <- left_join(states_spending_20, voter_trends, by = "state") |> filter(!is.na(electoral_votes)) |> group_by(results_2020) |>
+    summarize(
+      total_spending = sum(total_spent)
+    ) |>
+    mutate('total_spent_$' = scales::dollar(total_spending / 1e9, suffix = "B", accuracy = 0.01)) |> select(results_2020, 'total_spent_$') |> write_csv("../data/party_spending_20.csv") 
+
+
+
+  states_spending_by_party_24 <- left_join(states_spending_24, voter_trends, by = "state") |> filter(!is.na(electoral_votes)) |> group_by(results_2024) |>
+    summarize(
+      total_spending = sum(total_spent)
+    ) |>
+    mutate('total_spent_$' = scales::dollar(total_spending / 1e9, suffix = "B", accuracy = 0.01)) |> select(results_2024, 'total_spent_$') |> write_csv("../data/party_spending_24.csv") 
+
+
+
+
+```
+
+### Earmarks
+
+<iframe title="Florida received $2.4 billion in defense spending through earmarks from FY2024-26" aria-label="Choropleth map" id="datawrapper-chart-s2cTF" src="https://datawrapper.dwcdn.net/s2cTF/2/" scrolling="no" frameborder="0" style="width: 0; min-width: 100% !important; border: none;" height="527" data-external="1">
+
+</iframe>
+
+```{=html}
+<script type="text/javascript">(function(){function e(){window.addEventListener(`message`,function(e){if(e.data[`datawrapper-height`]!==void 0){var t=document.querySelectorAll(`iframe`);for(var n in e.data[`datawrapper-height`])for(var r=0,i;i=t[r];r++)if(i.contentWindow===e.source){var a=e.data[`datawrapper-height`][n]+`px`;i.style.height=a}}})}e()})();</script>
+```
+
+## Questions
+
+1.  How much of a statistical outlier is Virginia or Connecticut in terms of per capita spending?
+2.  How different are the Top 3 states in total spending? What are the biggest outliers?
+3.  Is the relationship between party and spending significant?
+4.  Why did states that voted for the opposite party of the sitting president receive more defense spending in both 2020 and 2024? Does this mean anything?
+
+## Potential issues
+
+Grants, contracts or spending may be officially spent in one area, but perhaps could be applied across the state. There could also be statewide grants. I need to evaluate this, as it could impact any analysis of county totals. For now, statewide anaylsis remains the safest bet.
+
+## Example employers
+
+### Palantir
+
+My community is all the communities that States Newsroom serves, so it would be important to watch a national player. While there is a slew of major defense contractors receiving money from the government, perhaps none have raised more attention in recent years than Palantir. The company specializes in AI development and software engineering, and has drawn scrutiny for its creation of spyware and surveillance technology employed by the federal government. It has received many multi-billion contracts by the DOD/DOW.
+
+[Department of Defense contract announcement](https://www.war.gov/News/Contracts/Contract/Article/4262594/contracts-for-aug-1-2025/){target="_blank"}
+
+This company is important to watch both for its controversial work, but also as a canary for the shifting federal defense contractor environment and increased presence of surveillance and technology companies in addition to more traditional weapons and vehicle manufacturers.
+
+### Lockheed Martin
+
+A more traditional example of the kind of company receiving this spending is Lockheed Martin, the international defense contractor that manufactures fighter jets, missile and weapons systems, and spacecraft. The company generates about \$75B in annual revenue, primarily through large government contracts. It has a close relationship with the U.S. government, employing about 110,000 workers across more than 150 facilities in dozens of states. This gives the company significant influence and lobbying power over Congress and the federal government,
+
+### Boeing
+
+Boeing similarly conducts significant business with the federal government and U.S. military. In addition to its significant commercial business producing airliners and other passenger jets, it produces fighter jets, drones, missiles, tankers and various other military-focused platforms. It reached almost \$90B in revenue last year, with about a third from government contracts.
+
+## Target audience
+
+This story would ideally be interesting for a wide audience. Given that most states have a certain level of military presence and receive defense spending, seeing where spending is concentrated should be of interest for people across the country. I think people in states receiving less defense spending might actually be more interested, as they’re receiving less of a benefit even though its supported by their tax dollars. \
+
+## For this story, I’d talk to: 
+
+- Rep. Adam Smith (D-WA), ranking member of the House Armed Services Committee and Rep. Mike Rogers (R-AL), chairman of the committee. 
+
+- Steve Ellis, president of Taxpayers for Commons Sense. He has been sounding the alarm on the impact of such a significant funding increase for the Department of Defense. 
+
+- Kristy E. Williams, Director of Defense Capabilities and Management for the U.S. Government Accountability Office. She recently oversaw a report into the Pentagon that determined the its leadership did not consider the impact of recent civilian federal worker layoffs on its operations. 
+
+## Story impact
+
+Trump’s request of \$1.5 trillion in funding for the military would be a massive surge over any previous budget. It also coincides with slashes in federal support for many other agencies and departments, rising costs, increasing inflation and layoffs of federal workers. The money for this budget increase would have to come from other sources, such as cuts for other services. And this could impact daily lives of U.S. citizens.
+
+## Summarize any previous coverage
+
+Most recent coverage has focused on the debate in Congress over Trump's requested budget. There have been many stories on Democrats and Congressional leadership pushing back against Trump's request, and what the increase would have for the military overall and its capabilities. Other coverage has compared defense spending in the U.S. compared to other nations, given that we spend more than the next several nations combined. Little coverage I've reviewed has focused on the difference between individual states or counties within the U.S.\
+
+## Photos, video, graphics
+
+- Photos: Pictures of military installations that will receive a boost in funding or the Pentagon. Also pictures of any lawmakers or sources I interview. 
+
+- Video: I could perhaps do a vertical video explaining this story. A lot of people on social media are concerned about military spending, so a quick explainer ahead of the budget reconciliation process could be useful.  
+
+- Graphics: I am going to make a heat map of U.S. counties by total defense spending. I can also make a chart showing spending based on whether states voted for Trump or Harris in 2024, with circles for each state colored depending on how it voted and sized in accordance with its defense funding. This can give viewers a sense if there are any party trends in funding.
+
+## Next steps
+
+Before I can finish my analysis, I still need to gain whatever data I can on the current budget request and see if there are any specific states or communities that will see a particularly small or large inrease/decrease. Additionally, I need to find if there is any data I can pull from 2025 or 2026. Currently, I only have data from 2020-2024, but ideally, I would like to include data from Trump’s second presidency as well. 
+
+## Estimated delivery
+
+I will have the bulk of my data analysis, research and visualization done this week. After that I need interviews to back up my research. I could turn this in by June 19, so I have time to track down lawmakers and advocates, as this is a busy time in Washington. 
+
+------------------------------------------------------------------------
