@@ -14,13 +14,13 @@ library(dplyr)
 library(janitor) 
 
 
-earmarks_24 <- read_csv("~/Documents/GitHub/SNDC-SamGauntt/defense/data/tabula-fy24 ndaa - cpf requests submitted for public posting 4.27.23.csv") |> clean_names() 
+earmarks_24 <- read_csv("~/Documents/GitHub/SNDC-SamGauntt/defense/earmarks_data/tabula-fy24 ndaa - cpf requests submitted for public posting 4.27.23.csv") |> clean_names() 
 
-earmarks_25 <- read_csv("~/Documents/GitHub/SNDC-SamGauntt/defense/data/tabula-fy25 ndaa - cpf requests submitted for public posting 5.20.24.csv") |> clean_names() 
+earmarks_25 <- read_csv("~/Documents/GitHub/SNDC-SamGauntt/defense/earmarks_data/tabula-fy25 ndaa - cpf requests submitted for public posting 5.20.24.csv") |> clean_names() 
 
-earmarks_26 <- read_csv("~/Documents/GitHub/SNDC-SamGauntt/defense/data/tabula-fy26_ndaa_-_cpf_requests_submitted_for_public_posting_7.7.25.csv") |> clean_names() 
+earmarks_26 <- read_csv("~/Documents/GitHub/SNDC-SamGauntt/defense/earmarks_data/tabula-fy26_ndaa_-_cpf_requests_submitted_for_public_posting_7.7.25.csv") |> clean_names() 
 
-earmarks_27 <- read_csv("~/Documents/GitHub/SNDC-SamGauntt/defense/data/tabula-fy27_ndaa_-_cpf_requests_submitted_for_public_posting_5.26.26.csv") |> clean_names() 
+earmarks_27 <- read_csv("~/Documents/GitHub/SNDC-SamGauntt/defense/earmarks_data/tabula-fy27_ndaa_-_cpf_requests_submitted_for_public_posting_5.26.26.csv") |> clean_names() 
 
 
 glimpse(earmarks_24)
@@ -71,11 +71,15 @@ write_csv(earmark_totals, "earmark_states.csv")
 ```
 
 ```{r}
-#defense contractor analysis 
+#earmarks by party
 
-
-
-
+earmarks_party_total <- read_csv("~/Documents/GitHub/SNDC-SamGauntt/defense/earmarks/Earmarks-earmarks-with-party/Sheet 2-Table 1.csv") |> 
+  group_by(fiscal_year, party) %>%
+  summarise(
+    total_requested = sum(amount_requested_in_thousands_of_dollars, na.rm = TRUE) * 1000,
+    .groups = "drop"
+  ) %>%
+  write_csv("earmark_totals_by_party_year.csv") 
 
 ```
 
@@ -193,6 +197,7 @@ get_defense_spending_by_year <- function(fy) {
     mutate(fiscal_year = fy)
 }
 
+
 # 2. Fetch data across all specified years and stack them
 all_years_data <- map_dfr(fiscal_years, get_defense_spending_by_year)
 
@@ -216,6 +221,8 @@ spending_trends <- cleaned_spending %>%
     pct_change_23_24 = ((fy_2024 - fy_2023) / fy_2023) * 100,
     pct_change_24_25 = ((fy_2025 - fy_2024) / fy_2024) * 100
   )
+
+
 
 # 5. Filter to compare Palantir directly against traditional legacy primes
 comparison_table <- spending_trends %>%
